@@ -25,6 +25,3 @@ example:
 
 clean:
 	rm -f whoami
-
-claude:
-	CLAUDE_CONFIG_DIR=/Users/alexispanagides/GolandProjects/quicken_cvrt/.claude-project claude
