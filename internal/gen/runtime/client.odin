@@ -16,7 +16,7 @@ Client :: struct {
     developer_key: string,
     // OAuth 2 bearer access token; used when developer_key is empty.
     access_token: string,
-    // HTTP transport; nil uses the default (libcurl-backed) transport.
+    // HTTP transport; nil uses the default (vendor:curl-backed) transport.
     transport: Transport_Proc,
     transport_data: rawptr,
 }

@@ -25,3 +25,6 @@ example:
 
 clean:
 	rm -f whoami
+
+claude:
+	CLAUDE_CONFIG_DIR=/Users/alexispanagides/GolandProjects/odin-api-gen claude

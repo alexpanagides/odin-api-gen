@@ -9,7 +9,7 @@ openapi.json  →  [odin-api-gen (Go)]  →  sdk/<yourapi>/
                                           models.odin          structs + enum constants
                                           api_<tag>.odin       one proc per operation
                                           client.odin          hand-written runtime (copied in)
-                                          transport_curl.odin  hand-written libcurl transport (copied in)
+                                          transport_curl.odin  hand-written vendor:curl transport (copied in)
 ```
 
 The reference target is the [PocketSmith API](https://github.com/pocketsmith/api)
@@ -24,12 +24,12 @@ sync with the generator.
 | Dependency | Needed for | Notes |
 |---|---|---|
 | **Go** ≥ 1.26 | Running the generator | Build-time only; nothing Go ships in your program. Modules: `getkin/kin-openapi` (fetched by `go mod`). |
-| **Odin compiler** | Building the generated SDK | Tested with `dev-2026-07`. The SDK uses only `core:` / `base:` packages (`encoding/json`, `strings`, `fmt`, `c`, `runtime`) — no third-party Odin dependencies. |
-| **libcurl** (system) | The default HTTP transport (TLS included) | Linked as `system:curl`. **macOS**: ships with the OS, nothing to install. **Linux**: install the shared library (`libcurl4` on Debian/Ubuntu, `libcurl` on most others); typically already present. **Windows**: not assumed — the default transport returns an error and you must supply your own (see [Swapping the transport](#swapping-the-transport)). |
+| **Odin compiler** | Building the generated SDK | Tested with `dev-2026-07`. The SDK uses only `core:` / `base:` packages (`encoding/json`, `strings`, `fmt`, `c`, `runtime`) plus `vendor:curl` for the default transport — no third-party Odin dependencies. |
+| **`vendor:curl`** (ships with Odin) | The default HTTP transport (TLS included) | Odin's own libcurl bindings; linking is configured by the vendor package. **Windows**: a static `libcurl.lib` is bundled with Odin, nothing to install. **macOS**: links the OS libcurl + zlib, nothing to install. **Linux**: needs the shared libraries `curl`, `z`, `mbedtls`, `mbedx509`, `mbedcrypto` (e.g. `libcurl4-openssl-dev zlib1g-dev libmbedtls-dev` on Debian/Ubuntu). |
 
-libcurl is only a dependency of `transport_curl.odin`. The generated API code
+`vendor:curl` is only imported by `transport_curl.odin`. The generated API code
 depends solely on the `Transport_Proc` interface in `client.odin`, so if you
-replace the transport you have no libcurl dependency at all.
+replace the transport (and delete that file) you have no curl dependency at all.
 
 ---
 
@@ -38,7 +38,7 @@ replace the transport you have no libcurl dependency at all.
 ```sh
 make generate    # regenerate sdk/pocketsmith from openapi.json, then odin check
 make test        # go test ./... (golden files + naming) && odin test tests
-make example     # build examples/whoami against system libcurl
+make example     # build examples/whoami (links libcurl via vendor:curl)
 ```
 
 Live smoke test:
@@ -178,8 +178,7 @@ Set it to use odin-http, a platform HTTP API, or a test mock (see
 `tests/pocketsmith_test.odin` for a complete mock example — that's how the
 whole SDK is tested without a network). Implementations must allocate the
 response body with the passed `allocator`; request strings are only valid for
-the duration of the call. This is also the escape hatch on Windows, where no
-system libcurl is assumed.
+the duration of the call.
 
 ---
 
@@ -223,11 +222,11 @@ internal/gen/
   naming.go                    snake_case / Ada_Case / proc-name derivation
   emit.go                      template rendering + runtime copy
   templates/*.tmpl             models.odin and api_<tag>.odin templates
-  runtime/*.odin               hand-written client + libcurl transport (source of truth)
+  runtime/*.odin               hand-written client + vendor:curl transport (source of truth)
 openapi.json                   PocketSmith spec (reference target)
 sdk/pocketsmith/               committed generated output (golden files)
 tests/                         Odin mock-transport tests of the generated SDK
-examples/whoami/               live smoke test (links system libcurl)
+examples/whoami/               live smoke test (links libcurl via vendor:curl)
 main_test.go                   golden-file test: regenerate + diff vs sdk/pocketsmith
 ```
 
@@ -241,7 +240,7 @@ main_test.go                   golden-file test: regenerate + diff vs sdk/pocket
   real `core:encoding/json`: URL/query building and percent-encoding, auth
   headers, `omitempty` body marshaling, `Maybe`/`null` decoding, tolerance of
   unknown response fields, and error mapping. `odin test tests` also proves
-  the libcurl bindings compile and link.
+  the vendor:curl transport compiles and links.
 - `internal/gen/naming_test.go` — name-derivation unit tests.
 
 ## Regeneration workflow
